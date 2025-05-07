@@ -1,0 +1,4 @@
+*.html
+*.docx
+*.json
+__pycache__
