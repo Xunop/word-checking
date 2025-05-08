@@ -10,9 +10,10 @@ import logging
 import re
 import sys
 import html
+from font import get_effective_font_property
 
 logging.basicConfig(
-    format="{levelname} - {message}", style="{", level=logging.DEBUG
+    format="{levelname} - {message}", style="{", level=logging.INFO
 )
 
 
@@ -107,6 +108,17 @@ class FormatChecker:
             return default_value
         return value
 
+    def _get_first_line_location(self, paragraph_text):
+        """获取段落首行索引"""
+        if not paragraph_text:
+            return None
+        newline_index = paragraph_text.find('\n')
+        if newline_index == -1: # No newline, whole text is one line
+            return [0, len(paragraph_text)]
+        else:
+            return [0, newline_index]
+
+
     def get_effective_rules(self, style_name_or_obj):
         """
         获取指定样式的有效规则，处理 based_on 继承和全局默认。
@@ -159,6 +171,7 @@ class FormatChecker:
         para_text_snippet = p.text[:30].replace("\n", " ")
         # highlighting context
         full_para_text = p.text
+        first_line_loc = self._get_first_line_location(full_para_text)
         direct_fmt = p.paragraph_format
         style_p_fmt = (
             p.style.paragraph_format if p.style else None
@@ -190,18 +203,19 @@ class FormatChecker:
                         if actual_alignment is not None
                         else "None"
                     ),
+                    error_char_location=first_line_loc
                 )
 
         if "first_line_indent_cm" in effective_rules:
-            expected_indent_emu = Cm(effective_rules["first_line_indent_cm"])
+            expected_indent_emu = effective_rules["first_line_indent_cm"]
             actual_indent_raw = self._get_effective_format_value(
                 direct_fmt, style_p_fmt, "first_line_indent", 0
             )
             actual_indent_emu = (
-                actual_indent_raw if actual_indent_raw is not None else 0
+                actual_indent_raw.cm if actual_indent_raw is not None and actual_indent_raw != 0 else 0
             )  # 确保是数值
 
-            if abs(actual_indent_emu - expected_indent_emu) > Cm(CM_TOLERANCE):
+            if abs(actual_indent_emu - expected_indent_emu) > CM_TOLERANCE:
                 self._add_error(
                     p_idx,
                     style_name,
@@ -211,7 +225,8 @@ class FormatChecker:
                     "first_line_indent_cm",
                     f"{effective_rules['first_line_indent_cm']:.2f} cm",
                     f"{Cm(actual_indent_emu).cm:.2f} cm",
-                )  # 使用 .cm 属性转换回来
+                    error_char_location=first_line_loc
+                )
 
         # 行间距规则
         actual_ls_rule = None
@@ -236,6 +251,7 @@ class FormatChecker:
                         if actual_ls_rule is not None
                         else "None"
                     ),
+                    error_char_location=first_line_loc
                 )
 
         # 行间距值 (仅当规则匹配或规则允许自定义值时检查)
@@ -296,6 +312,7 @@ class FormatChecker:
                     "line_spacing_value",
                     f"{expected_val:.2f}",
                     f"{actual_val:.2f}",
+                    error_char_location=first_line_loc
                 )
 
         if "space_before_pt" in effective_rules:
@@ -315,6 +332,7 @@ class FormatChecker:
                     "space_before_pt",
                     f"{expected_pt_val:.1f} pt",
                     f"{actual_pt:.1f} pt",
+                    error_char_location=first_line_loc
                 )
 
         if "space_after_pt" in effective_rules:
@@ -334,6 +352,7 @@ class FormatChecker:
                     "space_after_pt",
                     f"{expected_pt_val:.1f} pt",
                     f"{actual_pt:.1f} pt",
+                    error_char_location=first_line_loc
                 )
 
         if "keep_with_next" in effective_rules:
@@ -353,6 +372,7 @@ class FormatChecker:
                     "keep_with_next",
                     effective_rules["keep_with_next"],
                     actual_kwn,
+                    error_char_location=first_line_loc
                 )
 
         if "keep_together" in effective_rules:
@@ -369,6 +389,7 @@ class FormatChecker:
                     "keep_together",
                     effective_rules["keep_together"],
                     actual_kt,
+                    error_char_location=first_line_loc
                 )
 
         if "widow_control" in effective_rules:
@@ -378,14 +399,9 @@ class FormatChecker:
                 direct_fmt,
                 style_p_fmt,
                 "widow_control",
-                True,  # 假设 True 是更好的默认值
+                True,
             )
-            # 如果你的规则库中定义的 effective_rules["widow_control"] 期望的是 False 作为未设置时的对比值，那么默认值应设为 False
-            # 例如，如果 effective_rules["widow_control"] = False，且实际是 True (Word 默认)，则会报错。
-            # 这里保持和你原代码一致的逻辑，如果 None 则认为是 False 进行比较。
-            # 如果要严格匹配 Word 行为 (默认 True)，则 default_value 应为 True。
-            # 当前代码：若 direct_fmt 和 style_p_fmt 均未设置，则 actual_wc 将是 _get_effective_format_value 的 default_value
-            # 假设你的 effective_rules 期望 python-docx 的 None 等同于 False
+            
             actual_wc_for_comparison = actual_wc if actual_wc is not None else False
 
             if actual_wc_for_comparison != effective_rules["widow_control"]:
@@ -398,6 +414,7 @@ class FormatChecker:
                     "widow_control",
                     effective_rules["widow_control"],
                     actual_wc_for_comparison,
+                    error_char_location=first_line_loc
                 )
 
     def check_font_rules_for_paragraph(
@@ -406,24 +423,40 @@ class FormatChecker:
         paragraph_main_snippet = p.text[:30].replace("\n", " ")
         # paragraph_main_snippet = p.text.replace("\n", " ")
         full_para_text = p.text
+        current_char_offset_in_para = 0
+
+
         for r_idx, run in enumerate(p.runs):
-            if not run.text.strip():
+            run_text = run.text
+            run_len = len(run_text)
+            run_start_offset_in_para = current_char_offset_in_para
+            run_end_offset_in_para = run_start_offset_in_para + run_len
+            
+            # run 在当前段落的位置
+            run_loc_in_para = [run_start_offset_in_para, run_end_offset_in_para]
+
+            if not run_text.strip():
+                current_char_offset_in_para += run_len
                 continue
 
+            
+            # print(f"DEBUG::, {run_text}, {run.font.size} {run.style.font.size} {get_effective_font_property(p, run, "size")}")
+            # print(f"DEBUG::, {run_text}, {run.font.italic} {run.style.font.italic} {get_effective_font_property(p, run, "italic")}")
+            # print(f"DEBUG::, {run_text}, {run.font.italic} {run.style.font.italic} {get_effective_font_property(p, run, "name")}")
+            # continue
             run_text_snippet_detail = run.text[:20].replace("\n", " ")
             font = run.font
 
             if "font_size_pt" in effective_rules:
-                expected_size_val = effective_rules["font_size_pt"]  # Already in points
-                actual_size = (
-                    font.size.pt if font.size is not None else 0
-                )  # effective_rules.get('default_font_size_pt',0) from style
-                # If actual_size is 0, it might be inheriting. Need a more robust way to get effective font size if not directly set on run.
-                # For now, direct check.
-                if (
-                    actual_size == 0 and p.style.font.size
-                ):  # Check paragraph style font if run font size is 0/None
-                    actual_size = p.style.font.size.pt
+                expected_size_val = effective_rules["font_size_pt"]
+                # actual_size = (
+                #     font.size.pt if font.size is not None else 0
+                # )
+                # if (
+                #     actual_size == 0 and p.style.font.size
+                # ):  # 如果 run 的字体大小字段为 0/None，检查段落样式字体大小
+                #     actual_size = p.style.font.size.pt
+                actual_size = get_effective_font_property(p, run, "size")
 
                 if abs(actual_size - expected_size_val) > PT_TOLERANCE:
                     self._add_error(
@@ -437,14 +470,16 @@ class FormatChecker:
                         f"{actual_size:.1f} pt",
                         run_idx=r_idx,
                         run_text_snippet_for_detail=run_text_snippet_detail,
+                        error_char_location=run_loc_in_para
                     )
 
             if "font_bold" in effective_rules:
-                actual_bold = (
-                    font.bold
-                    if font.bold is not None
-                    else (p.style.font.bold if p.style.font else False)
-                )  # Check style if None
+                # actual_bold = (
+                #     font.bold
+                #     if font.bold is not None
+                #     else (p.style.font.bold if p.style.font else False)
+                # )
+                actual_bold = get_effective_font_property(p, run, "bold")
                 if actual_bold != effective_rules["font_bold"]:
                     self._add_error(
                         p_idx,
@@ -457,14 +492,16 @@ class FormatChecker:
                         actual_bold,
                         run_idx=r_idx,
                         run_text_snippet_for_detail=run_text_snippet_detail,
+                        error_char_location=run_loc_in_para
                     )
 
             if "font_italic" in effective_rules:
-                actual_italic = (
-                    font.italic
-                    if font.italic is not None
-                    else (p.style.font.italic if p.style.font else False)
-                )  # Check style if None
+                # actual_italic = (
+                #     font.italic
+                #     if font.italic is not None
+                #     else (p.style.font.italic if p.style.font else False)
+                # )  # Check style if None
+                actual_italic = get_effective_font_property(p, run, "italic")
                 if actual_italic != effective_rules["font_italic"]:
                     self._add_error(
                         p_idx,
@@ -477,6 +514,7 @@ class FormatChecker:
                         actual_italic,
                         run_idx=r_idx,
                         run_text_snippet_for_detail=run_text_snippet_detail,
+                        error_char_location=run_loc_in_para
                     )
 
             run_text = run.text
@@ -488,7 +526,7 @@ class FormatChecker:
             target_font_value = None
             font_to_check_actual = None
 
-            effective_run_fonts = get_effective_run_fonts(run, p, doc)  # utils.
+            effective_run_fonts = get_effective_run_fonts(run, p, doc)
 
             if is_chinese_dominant and "chinese_font" in effective_rules:
                 target_font_key = "chinese_font"
@@ -496,24 +534,19 @@ class FormatChecker:
                 font_to_check_actual = effective_run_fonts.get("eastAsia")
             elif (
                 is_western_dominant or (not is_chinese_dominant and run_text.strip())
-            ) and "western_font" in effective_rules:  # Apply western if dominant or if not chinese and has text
+            ) and "western_font" in effective_rules:
                 target_font_key = "western_font"
                 target_font_value = effective_rules["western_font"]
-                font_to_check_actual = effective_run_fonts.get("ascii")  # or hAnsi
+                font_to_check_actual = effective_run_fonts.get("ascii")
                 if font_to_check_actual is None:
                     font_to_check_actual = effective_run_fonts.get("hAnsi")
 
-            # Fallback for common_script_font if specific checks didn't apply or found None
-            if not target_font_key and "common_script_font" in effective_rules:
-                # This logic might need refinement based on how common_script_font is intended to be used.
-                # Often, 'ascii' or 'hAnsi' might hold the "common" font if 'eastAsia' is different.
-                # Or it could be a fallback if neither Chinese nor Western text is clearly dominant.
-                pass  # common_script_font is complex, often theme-dependent. For now, rely on ascii/eastAsia.
+            # 既不是中文也不是英文则大概率是标点符号（不保证完整），目前暂时先不考虑
+            # if not target_font_key and "common_script_font" in effective_rules:
+            #     pass
 
             if target_font_key and target_font_value:
                 if font_to_check_actual != target_font_value:
-                    # Normalize font names: "(正文)" etc. can be tricky.
-                    # Simple check for now. Could strip common MS suffixes.
                     normalized_actual = (
                         font_to_check_actual.replace(" (正文)", "").replace(
                             " (标题)", ""
@@ -538,6 +571,7 @@ class FormatChecker:
                             font_to_check_actual,
                             run_idx=r_idx,
                             run_text_snippet_for_detail=run_text_snippet_detail,
+                            error_char_location=run_loc_in_para
                         )
             elif (
                 "western_font" in effective_rules
@@ -560,7 +594,9 @@ class FormatChecker:
                         actual_font_name,
                         run_idx=r_idx,
                         run_text_snippet_for_detail=run_text_snippet_detail,
+                        error_char_location=run_loc_in_para
                     )
+            current_char_offset_in_para += run_len
 
     def check_spacing_rules_for_paragraph(self, p, p_idx, effective_rules, style_name):
         text = p.text
@@ -737,6 +773,11 @@ class FormatChecker:
         ellipsis_start = "..." if snippet_display_start > 0 else ""
         ellipsis_end = "..." if snippet_display_end < text_len else ""
         
+        # 如果高亮部分为空，使用“空内容或仅空白表示”
+        if not prefix and not highlighted_content and not suffix and (ellipsis_start or ellipsis_end):
+            if not full_text[snippet_display_start:snippet_display_end].strip():
+                 return f"{ellipsis_start}[空内容或仅空白]{ellipsis_end}"
+
         return f"{ellipsis_start}{prefix}<span class='char-highlight'>{highlighted_content}</span>{suffix}{ellipsis_end}"
 
     def _generate_highlighted_console_snippet(self, full_text, location, context_chars=20, is_tty=True, colors_class=None):
@@ -759,6 +800,10 @@ class FormatChecker:
 
         ellipsis_start = "..." if snippet_display_start > 0 else ""
         ellipsis_end = "..." if snippet_display_end < text_len else ""
+
+        if not prefix and not highlighted_content and not suffix and (ellipsis_start or ellipsis_end):
+            if not full_text[snippet_display_start:snippet_display_end].strip():
+                 return f"{ellipsis_start}[空内容或仅空白]{ellipsis_end}"
 
         if is_tty and colors_class:
             highlighted_part_colored = f"{colors_class.HIGHLIGHT_CHAR}{highlighted_content}{colors_class.ENDC}"
@@ -790,7 +835,7 @@ class FormatChecker:
             .actual { color: #c0392b; font-weight: 500; }
             .run-info { font-size: 0.85em; color: #95a5a6; }
             .char-highlight { background-color: #f1c40f; color: #c0392b; font-weight: bold; padding: 0.1em 0; border-radius: 0.2em;}
-            .context-snippet { font-family: 'Courier New', Courier, monospace; font-size: 0.9em; color: #555; display: block; margin-top: 5px; white-space: pre-wrap; }
+            .context-snippet { font-family: 'Courier New', Courier, monospace; font-size: 0.9em; color: #555; display: block; margin-top: 5px; white-space: pre-wrap; word-break: break-all;}
         </style>
         </head><body><h1>格式检查报告</h1>
         """
@@ -923,8 +968,32 @@ if __name__ == "__main__":
     from rules import RE_FULL_WIDTH_BRACKETS_LEFT, RE_FULL_WIDTH_BRACKETS_RIGHT
 
     doc_file_path = (
-        "test.docx"
+        "B21030518盘贻桓-毕业设计.docx"
     )
+
+    try:
+        doc = Document(doc_file_path)
+    except Exception:
+        print(f"Test file '{doc_file_path}' not found or invalid. Creating a dummy one.")
+        doc = Document()
+        # 测试段落格式错误（对齐）
+        p1 = doc.add_paragraph("This paragraph should be left aligned.", style='Normal')
+        p1.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
+        p2 = doc.add_paragraph("Text with a ", style='Normal')
+        run_correct_font = p2.add_run("correctly_sized")
+        run_correct_font.font.size = Pt(11)
+        p2.add_run(" segment, then an ")
+        run_wrong_size = p2.add_run("ERROR_SIZE")
+        run_wrong_size.font.size = Pt(11)
+        p2.add_run(" run, and a ")
+        run_wrong_bold = p2.add_run("WRONGLY_BOLD")
+        run_wrong_bold.font.bold = True
+        p2.add_run(" run.")
+        
+        doc.add_paragraph("First line of text for para rule.\nSecond line of text.\nThird line.", style='Normal')
+        
+        doc.save(doc_file_path)
 
     checker = FormatChecker(DEFAULT_RULES)
     checker.check_document(doc_file_path)
