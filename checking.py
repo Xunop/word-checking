@@ -81,17 +81,17 @@ class FormatChecker:
 
         para_error_block["details"].append(error_item)
 
-        log_msg_for_debug = (
-            f"Para {para_idx+1} (Style: '{style_name}', Snippet: '{paragraph_main_snippet[:20]}...') - "
-            f"Category: '{error_category}', Rule: '{rule_key}', Expected: {expected}, Actual: {actual}"
-        )
-        if run_idx is not None:
-            log_msg_for_debug += f", Run {run_idx+1}"
-            if run_text_snippet_for_detail:
-                log_msg_for_debug += f" ('{run_text_snippet_for_detail[:15]}...')"
-        if error_char_location:
-            log_msg_for_debug += f", Location: {error_char_location}"
-        logging.debug(f"Adding structured error: {log_msg_for_debug}")
+        # log_msg_for_debug = (
+        #     f"Para {para_idx+1} (Style: '{style_name}', Snippet: '{paragraph_main_snippet[:20]}...') - "
+        #     f"Category: '{error_category}', Rule: '{rule_key}', Expected: {expected}, Actual: {actual}"
+        # )
+        # if run_idx is not None:
+        #     log_msg_for_debug += f", Run {run_idx+1}"
+        #     if run_text_snippet_for_detail:
+        #         log_msg_for_debug += f" ('{run_text_snippet_for_detail[:15]}...')"
+        # if error_char_location:
+        #     log_msg_for_debug += f", Location: {error_char_location}"
+        # logging.debug(f"Adding structured error: {log_msg_for_debug}")
 
     def _get_effective_format_value(
         self, direct_format, style_format, attribute_name, default_value
@@ -127,6 +127,7 @@ class FormatChecker:
         effective_rules = {}
         effective_rules.update(self.rules.get("fonts", {}))
         effective_rules.update(self.rules.get("spacing", {}))
+        effective_rules.update(self.rules.get("section", {}))
 
         style_name = ""
         if isinstance(style_name_or_obj, str):
@@ -206,25 +207,25 @@ class FormatChecker:
                     error_char_location=first_line_loc
                 )
 
-        if "first_line_indent_cm" in effective_rules:
-            expected_indent_emu = effective_rules["first_line_indent_cm"]
+        if "first_line_indent_pt" in effective_rules:
+            expected_indent_emu = effective_rules["first_line_indent_pt"]
             actual_indent_raw = self._get_effective_format_value(
                 direct_fmt, style_p_fmt, "first_line_indent", 0
             )
             actual_indent_emu = (
-                actual_indent_raw.cm if actual_indent_raw is not None and actual_indent_raw != 0 else 0
+                actual_indent_raw.pt if actual_indent_raw is not None and actual_indent_raw != 0 else 0
             )  # 确保是数值
 
-            if abs(actual_indent_emu - expected_indent_emu) > CM_TOLERANCE:
+            if abs(actual_indent_emu - expected_indent_emu) > PT_TOLERANCE:
                 self._add_error(
                     p_idx,
                     style_name,
                     para_text_snippet,
                     full_para_text,
                     "段落格式",
-                    "first_line_indent_cm",
-                    f"{effective_rules['first_line_indent_cm']:.2f} cm",
-                    f"{Cm(actual_indent_emu).cm:.2f} cm",
+                    "first_line_indent_pt",
+                    f"{effective_rules['first_line_indent_pt']:.2f} pt",
+                    f"{actual_indent_emu:.2f} pt",
                     error_char_location=first_line_loc
                 )
 
@@ -286,7 +287,7 @@ class FormatChecker:
                         float(actual_val_raw / 127000)
                         if isinstance(actual_val_raw, int) and actual_val_raw > 200
                         else float(actual_val_raw)
-                    )  # 经验转换
+                    )
                 elif effective_rules["line_spacing_rule"] in [
                     WD_LINE_SPACING.AT_LEAST,
                     WD_LINE_SPACING.EXACTLY,
@@ -710,6 +711,61 @@ class FormatChecker:
             )
             return self.errors  # Return early
 
+        for i, section in enumerate(doc.sections):
+            left = section.left_margin.cm
+            right = section.right_margin.cm
+            top = section.top_margin.cm
+            bottom = section.bottom_margin.cm
+            expect_margin = self.rules.get("section")
+            expect_left = expect_margin.get("left_margin_cm")
+            expect_right = expect_margin.get("right_margin_cm")
+            expect_top = expect_margin.get("top_margin_cm")
+            expect_bottom = expect_margin.get("bottom_margin_cm")
+            if abs(left - expect_left) > CM_TOLERANCE:
+                self._add_error(
+                    0,
+                    None,
+                    None,
+                    None,
+                    "节格式",
+                    "页面大小",
+                    expect_left,
+                    left,
+                )
+            if abs(right - expect_right) > CM_TOLERANCE:
+                self._add_error(
+                    0,
+                    None,
+                    None,
+                    None,
+                    "节格式",
+                    "页面大小",
+                    expect_right,
+                    right,
+                )
+            if abs(top - expect_top) > CM_TOLERANCE:
+                self._add_error(
+                    0,
+                    None,
+                    None,
+                    None,
+                    "节",
+                    "页面大小",
+                    expect_top,
+                    top,
+                )
+            if abs(bottom - expect_bottom) > CM_TOLERANCE:
+                self._add_error(
+                    0,
+                    None,
+                    None,
+                    None,
+                    "节格式",
+                    "页面大小",
+                    expect_bottom,
+                    bottom,
+                )
+
         for p_idx, p in enumerate(doc.paragraphs):
             if not p.text.strip() and not p.runs:
                 continue
@@ -968,7 +1024,7 @@ if __name__ == "__main__":
     from rules import RE_FULL_WIDTH_BRACKETS_LEFT, RE_FULL_WIDTH_BRACKETS_RIGHT
 
     doc_file_path = (
-        "B21030518盘贻桓-毕业设计.docx"
+        "test.docx"
     )
 
     try:

@@ -152,7 +152,7 @@ def get_document_default_pPr(document):
     # 移除值为 None 的条目，以便后续 get() 操作能正确返回 None
     return {k: v for k, v in doc_defaults_pPr_dict.items() if v is not None}
 
-_DOC_DEFAULTS_CACHE = {} # 用于缓存每个文档的默认设置
+# _DOC_DEFAULTS_CACHE = {} # 用于缓存每个文档的默认设置
 
 def get_effective_paragraph_property(paragraph, property_name):
     """
@@ -160,12 +160,8 @@ def get_effective_paragraph_property(paragraph, property_name):
     property_name 必须是 ParagraphFormat 对象的有效属性名 (字符串)。
     """
     doc = paragraph.part.document # 获取 Paragraph 所在的 Document 对象
-    doc_key = id(doc) # 使用 Document 对象的 id 作为缓存的键
 
-    if doc_key not in _DOC_DEFAULTS_CACHE:
-        _DOC_DEFAULTS_CACHE[doc_key] = get_document_default_pPr(doc)
-    
-    doc_defaults = _DOC_DEFAULTS_CACHE[doc_key]
+    # doc_defaults = get_document_default_pPr(doc)
 
     # 1. 检查直接格式化
     #    getattr 用于通过字符串名称访问对象的属性
@@ -193,9 +189,9 @@ def get_effective_paragraph_property(paragraph, property_name):
             
     # 4. 检查文档默认段落设置
     #    doc_defaults 字典的键应与 property_name 匹配
-    default_value = doc_defaults.get(property_name)
-    if default_value is not None:
-        return default_value
+    # default_value = doc_defaults.get(property_name)
+    # if default_value is not None:
+    #     return default_value
         
     # 5. 如果所有层级都未定义，python-docx 的 ParagraphFormat 属性本身
     #    在被访问时，如果其底层 XML 不存在对应设置，通常会返回 None 或一个

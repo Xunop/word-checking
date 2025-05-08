@@ -1,6 +1,12 @@
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 
 DEFAULT_RULES = {
+    "section": {
+        "left_margin_cm": 3,
+        "right_margin_cm": 3,
+        "top_margin_cm": 2,
+        "bottom_margin_cm": 2,
+    },
     "fonts": {
         "chinese": "宋体",
         "western": "Times New Roman",
@@ -22,10 +28,10 @@ DEFAULT_RULES = {
             "chinese_font": "宋体",
             "western_font": "Times New Roman",
             "common_script_font": "宋体",
-            "font_size_pt": 12,
+            "font_size_pt": 12,  # 小四号
             "font_bold": False,
             "font_italic": False,
-            "first_line_indent_cm": 0.85,
+            "first_line_indent_pt": 24,  # 首行缩进 2 字符 = font_size_pt * 2
             "line_spacing_rule": WD_LINE_SPACING.MULTIPLE,
             "line_spacing_value": 1.25,
             "alignment": WD_ALIGN_PARAGRAPH.JUSTIFY,
@@ -37,25 +43,84 @@ DEFAULT_RULES = {
             "require_space_between_cn_en": False,
             "require_space_between_cn_number": False,
         },
-        "标题2": {
-            "based_on": "论文正文",
+        "标题1": {
+            "based_on": None,
             "chinese_font": "黑体",
             "western_font": "Times New Roman",
             "common_script_font": "黑体",
-            "font_size_pt": 16,
+            "font_size_pt": 16,  # 三号
             "font_bold": True,
             "font_italic": False,
-            "first_line_indent_cm": 0,
+            "first_line_indent_pt": 0,
             "line_spacing_rule": WD_LINE_SPACING.MULTIPLE,
             "line_spacing_value": 1.25,
             "alignment": WD_ALIGN_PARAGRAPH.CENTER,
-            "space_before_pt": 18,
-            "space_after_pt": 12,
-            "keep_with_next": True,
-            "keep_together": True,
+            "space_before_pt": 0,
+            "space_after_pt": 0,
+            "keep_with_next": False,
+            "keep_together": False,
             "widow_control": True,
             "require_space_between_cn_en": False,
             "require_space_between_en_number": True,
+            "require_space_between_cn_number": True,
+        },
+        "标题2": {
+            "based_on": None,
+            "chinese_font": "黑体",
+            "western_font": "Times New Roman",
+            "common_script_font": "黑体",
+            "font_size_pt": 14,  # 四号
+            "font_bold": True,
+            "font_italic": False,
+            "first_line_indent_pt": 0,
+            "line_spacing_rule": WD_LINE_SPACING.MULTIPLE,
+            "line_spacing_value": 1.25,
+            "alignment": WD_ALIGN_PARAGRAPH.CENTER,
+            "space_before_pt": 0,
+            "space_after_pt": 0,
+            "keep_with_next": False,
+            "keep_together": False,
+            "widow_control": True,
+            "require_space_between_cn_en": False,
+            "require_space_between_en_number": True,
+            "require_space_between_cn_number": True,
+        },
+        "标题3": {
+            "based_on": None,
+            "chinese_font": "黑体",
+            "western_font": "Times New Roman",
+            "common_script_font": "黑体",
+            "font_size_pt": 14,  # 四号
+            "font_bold": True,
+            "font_italic": False,
+            "first_line_indent_pt": 0,
+            "line_spacing_rule": WD_LINE_SPACING.MULTIPLE,
+            "line_spacing_value": 1.25,
+            "alignment": WD_ALIGN_PARAGRAPH.CENTER,
+            "space_before_pt": 0,
+            "space_after_pt": 0,
+            "keep_with_next": False,
+            "keep_together": False,
+            "widow_control": True,
+            "require_space_between_cn_en": False,
+            "require_space_between_en_number": True,
+            "require_space_between_cn_number": True,
+        },
+        "图": {
+            "chinese_font": "宋体",
+            "western_font": "Times New Roman",
+            "common_script_font": "宋体",
+            "font_size_pt": 12,
+            "font_bold": False,
+            "font_italic": False,
+            "first_line_indent_pt": 0,
+            "line_spacing_rule": WD_LINE_SPACING.MULTIPLE,
+            "alignment": WD_ALIGN_PARAGRAPH.CENTER,
+            "space_before_pt": 0,
+            "space_after_pt": 0,
+            "keep_with_next": False,
+            "require_space_between_cn_en": False,
+            "require_space_between_cn_number": True,
         },
         "Heading 1": {
             "based_on": "论文正文",
@@ -65,7 +130,7 @@ DEFAULT_RULES = {
             "font_size_pt": 16,
             "font_bold": True,
             "font_italic": False,
-            "first_line_indent_cm": 0,
+            "first_line_indent_pt": 0,
             "line_spacing_rule": WD_LINE_SPACING.MULTIPLE,
             "line_spacing_value": 1.25,
             "alignment": WD_ALIGN_PARAGRAPH.CENTER,
@@ -84,7 +149,7 @@ DEFAULT_RULES = {
             "font_size_pt": 14,
             "font_bold": True,
             "font_italic": False,
-            "first_line_indent_cm": 0,
+            "first_line_indent_pt": 0,
             "line_spacing_rule": WD_LINE_SPACING.MULTIPLE,
             "line_spacing_value": 1.25,
             "alignment": WD_ALIGN_PARAGRAPH.LEFT,
@@ -101,7 +166,7 @@ DEFAULT_RULES = {
             "font_size_pt": 12,
             "font_bold": True,
             "font_italic": False,
-            "first_line_indent_cm": 0,
+            "first_line_indent_pt": 0,
             "line_spacing_rule": WD_LINE_SPACING.MULTIPLE,
             "line_spacing_value": 1.25,
             "alignment": WD_ALIGN_PARAGRAPH.LEFT,
@@ -117,29 +182,13 @@ DEFAULT_RULES = {
             "font_size_pt": 10.5,
             "font_bold": False,
             "font_italic": False,
-            "first_line_indent_cm": 0,
+            "first_line_indent_pt": 0,
             "line_spacing_rule": WD_LINE_SPACING.SINGLE,
             "alignment": WD_ALIGN_PARAGRAPH.CENTER,
             "space_before_pt": 6,
             "space_after_pt": 12,
             "keep_with_next": False,
             "require_space_between_cn_en": True,
-        },
-        "图": {
-            "chinese_font": "宋体",
-            "western_font": "Times New Roman",
-            "common_script_font": "宋体",
-            "font_size_pt": 10.5,
-            "font_bold": False,
-            "font_italic": False,
-            "first_line_indent_cm": 0,
-            "line_spacing_rule": WD_LINE_SPACING.SINGLE,
-            "alignment": WD_ALIGN_PARAGRAPH.CENTER,
-            "space_before_pt": 0,
-            "space_after_pt": 0,
-            "keep_with_next": False,
-            "require_space_between_cn_en": False,
-            "require_space_between_cn_number": True,
         },
         "表标题": {
             "chinese_font": "宋体",
@@ -148,7 +197,7 @@ DEFAULT_RULES = {
             "font_size_pt": 10.5,
             "font_bold": False,
             "font_italic": False,
-            "first_line_indent_cm": 0,
+            "first_line_indent_pt": 0,
             "line_spacing_rule": WD_LINE_SPACING.SINGLE,
             "alignment": WD_ALIGN_PARAGRAPH.CENTER,
             "space_before_pt": 12,
@@ -196,19 +245,19 @@ DEFAULT_RULES = {
             "space_after_pt": 0,
             "require_space_between_cn_en": False,
         },
-    }
+    },
 }
 # --- 规则定义结束 ---
 
 # 用于浮点数比较的容差
 FLOAT_TOLERANCE = 0.01
-PT_TOLERANCE = 0.5 # 磅值的容差，因为python-docx转换可能引入微小差异
-CM_TOLERANCE = 0.01 # 厘米值的容差
+PT_TOLERANCE = 0.5  # 磅值的容差，因为python-docx转换可能引入微小差异
+CM_TOLERANCE = 0.01  # 厘米值的容差
 
 # 中文字符和数字的正则表达式模式
-RE_CHINESE = r'[\u4e00-\u9fff]'
-RE_WESTERN = r'[a-zA-Z]'
-RE_NUMBER = r'[0-9]'
+RE_CHINESE = r"[\u4e00-\u9fff]"
+RE_WESTERN = r"[a-zA-Z]"
+RE_NUMBER = r"[0-9]"
 
 RE_CHINESE_PUNCTUATION = "[︰﹐﹑﹒·﹔﹕‘’“”〝〞‵′〃『』「」﹁﹂﹃﹄﹙﹚〈〉﹝﹞﹖﹑]"
 RE_FULL_WIDTH_BRACKETS_LEFT = "[（［｛【〖〔〈《「『]"
