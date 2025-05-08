@@ -11,6 +11,7 @@ import re
 import sys
 import html
 from font import get_effective_font_property
+from paragraph import get_effective_first_line_indent, get_effective_alignment,get_effective_line_spacing_rule, get_effective_line_spacing
 
 logging.basicConfig(
     format="{levelname} - {message}", style="{", level=logging.INFO
@@ -185,11 +186,13 @@ class FormatChecker:
         #     print(f"样式格式行距: {style_p_fmt.line_spacing}, 规则: {style_p_fmt.line_spacing_rule}")
         # else:
         #     print("无样式格式对象")
+        # return
 
         if "alignment" in effective_rules:
-            actual_alignment = self._get_effective_format_value(
-                direct_fmt, style_p_fmt, "alignment", WD_ALIGN_PARAGRAPH.LEFT
-            )
+            # actual_alignment = self._get_effective_format_value(
+            #     direct_fmt, style_p_fmt, "alignment", WD_ALIGN_PARAGRAPH.LEFT
+            # )
+            actual_alignment = get_effective_alignment(p)
             if actual_alignment != effective_rules["alignment"]:
                 self._add_error(
                     p_idx,
@@ -208,15 +211,16 @@ class FormatChecker:
                 )
 
         if "first_line_indent_pt" in effective_rules:
-            expected_indent_emu = effective_rules["first_line_indent_pt"]
-            actual_indent_raw = self._get_effective_format_value(
-                direct_fmt, style_p_fmt, "first_line_indent", 0
-            )
-            actual_indent_emu = (
-                actual_indent_raw.pt if actual_indent_raw is not None and actual_indent_raw != 0 else 0
-            )  # 确保是数值
+            expected_indent = effective_rules["first_line_indent_pt"]
+            # actual_indent_raw = self._get_effective_format_value(
+            #     direct_fmt, style_p_fmt, "first_line_indent", 0
+            # )
+            # actual_indent_emu = (
+            #     actual_indent_raw.pt if actual_indent_raw is not None and actual_indent_raw != 0 else 0
+            # )  # 确保是数值
+            actual_indent = get_effective_first_line_indent(p)
 
-            if abs(actual_indent_emu - expected_indent_emu) > PT_TOLERANCE:
+            if abs(actual_indent - expected_indent) > PT_TOLERANCE:
                 self._add_error(
                     p_idx,
                     style_name,
@@ -225,19 +229,20 @@ class FormatChecker:
                     "段落格式",
                     "first_line_indent_pt",
                     f"{effective_rules['first_line_indent_pt']:.2f} pt",
-                    f"{actual_indent_emu:.2f} pt",
+                    f"{actual_indent:.2f} pt",
                     error_char_location=first_line_loc
                 )
 
         # 行间距规则
         actual_ls_rule = None
         if "line_spacing_rule" in effective_rules:
-            actual_ls_rule = self._get_effective_format_value(
-                direct_fmt,
-                style_p_fmt,
-                "line_spacing_rule",
-                WD_LINE_SPACING.SINGLE,  # 默认单倍行距
-            )
+            # actual_ls_rule = self._get_effective_format_value(
+            #     direct_fmt,
+            #     style_p_fmt,
+            #     "line_spacing_rule",
+            #     WD_LINE_SPACING.SINGLE,  # 默认单倍行距
+            # )
+            actual_ls_rule = get_effective_line_spacing_rule(p)
             if actual_ls_rule != effective_rules["line_spacing_rule"]:
                 self._add_error(
                     p_idx,
@@ -256,7 +261,6 @@ class FormatChecker:
                 )
 
         # 行间距值 (仅当规则匹配或规则允许自定义值时检查)
-        # 注意：actual_ls_rule 此处使用的是已经经过回退逻辑确定的规则
         if (
             "line_spacing_value" in effective_rules
             and actual_ls_rule
@@ -275,35 +279,36 @@ class FormatChecker:
             # 对于行距值，如果规则是 SINGLE, DOUBLE, ONE_POINT_FIVE，其 line_spacing 属性可能为 None 或特定值 (如 1.0, 2.0, 1.5)
             # 当规则是 MULTIPLE, AT_LEAST, EXACTLY 时，line_spacing 存储的是 Pt 值 (对于 MULTIPLE，是浮点数)
 
-            actual_val_raw = self._get_effective_format_value(
-                direct_fmt, style_p_fmt, "line_spacing", None  # 先获取原始值
-            )
+            # actual_val_raw = self._get_effective_format_value(
+            #     direct_fmt, style_p_fmt, "line_spacing", None  # 先获取原始值
+            # )
 
-            actual_val = 0.0  # 默认值
-            if actual_val_raw is not None:
-                if effective_rules["line_spacing_rule"] == WD_LINE_SPACING.MULTIPLE:
-                    # python-docx 对于多倍行距，line_spacing 直接返回浮点数 (例如 1.5 代表1.5倍行距)
-                    actual_val = (
-                        float(actual_val_raw / 127000)
-                        if isinstance(actual_val_raw, int) and actual_val_raw > 200
-                        else float(actual_val_raw)
-                    )
-                elif effective_rules["line_spacing_rule"] in [
-                    WD_LINE_SPACING.AT_LEAST,
-                    WD_LINE_SPACING.EXACTLY,
-                ]:
-                    # 对于 AT_LEAST 和 EXACTLY，line_spacing 返回的是 EMU，需要转换为 Pt
-                    actual_val = (
-                        Pt(actual_val_raw).pt
-                        if isinstance(actual_val_raw, int)
-                        else float(actual_val_raw)
-                    )  # 假设如果不是int，已经是Pt
-                else:  # 其他情况（SINGLE, DOUBLE, ONE_POINT_FIVE），line_spacing 可能不是我们期望的数值比较对象
-                    actual_val = (
-                        float(actual_val_raw) if actual_val_raw is not None else 1.0
-                    )  # 默认给个值避免比较错误
+            # actual_val = 0.0  # 默认值
+            # if actual_val_raw is not None:
+            #     if effective_rules["line_spacing_rule"] == WD_LINE_SPACING.MULTIPLE:
+            #         # python-docx 对于多倍行距，line_spacing 直接返回浮点数 (例如 1.5 代表1.5倍行距)
+            #         actual_val = (
+            #             float(actual_val_raw / 127000)
+            #             if isinstance(actual_val_raw, int) and actual_val_raw > 200
+            #             else float(actual_val_raw)
+            #         )
+            #     elif effective_rules["line_spacing_rule"] in [
+            #         WD_LINE_SPACING.AT_LEAST,
+            #         WD_LINE_SPACING.EXACTLY,
+            #     ]:
+            #         # 对于 AT_LEAST 和 EXACTLY，line_spacing 返回的是 EMU，需要转换为 Pt
+            #         actual_val = (
+            #             Pt(actual_val_raw).pt
+            #             if isinstance(actual_val_raw, int)
+            #             else float(actual_val_raw)
+            #         )  # 假设如果不是int，已经是Pt
+            #     else:  # 其他情况（SINGLE, DOUBLE, ONE_POINT_FIVE），line_spacing 可能不是我们期望的数值比较对象
+            #         actual_val = (
+            #             float(actual_val_raw) if actual_val_raw is not None else 1.0
+            #         )  # 默认给个值避免比较错误
+            actual_val = get_effective_line_spacing(p)
 
-            if abs(actual_val - expected_val) > FLOAT_TOLERANCE:
+            if abs(actual_val - expected_val) > PT_TOLERANCE:
                 self._add_error(
                     p_idx,
                     style_name,
@@ -771,8 +776,14 @@ class FormatChecker:
                 continue
 
             style_name = p.style.name
-            logging.debug(f"样式名称：{style_name}")
+            # print(f"样式名称：{style_name}")
+
+            # print(get_effective_line_spacing_rule(p))
+            # print(get_effective_alignment(p))
+            # print(get_effective_line_spacing(p))
+            # print(get_effective_first_line_indent(p))
             effective_rules = self.get_effective_rules(p.style)
+            # continue
 
             # 检查这个段落的样式是否在规则集中，如果没有则回退
             is_style_explicitly_defined = style_name in self.rules["paragraph"] or (
@@ -1029,8 +1040,8 @@ if __name__ == "__main__":
 
     try:
         doc = Document(doc_file_path)
-    except Exception:
-        print(f"文档 '{doc_file_path}' 不存在")
+    except Exception as e:
+        print(f"Err: {e}, 文档 '{doc_file_path}' 不存在")
         exit(1)
         # doc = Document()
         # # 测试段落格式错误（对齐）
