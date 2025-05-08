@@ -1030,26 +1030,27 @@ if __name__ == "__main__":
     try:
         doc = Document(doc_file_path)
     except Exception:
-        print(f"Test file '{doc_file_path}' not found or invalid. Creating a dummy one.")
-        doc = Document()
-        # 测试段落格式错误（对齐）
-        p1 = doc.add_paragraph("This paragraph should be left aligned.", style='Normal')
-        p1.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-
-        p2 = doc.add_paragraph("Text with a ", style='Normal')
-        run_correct_font = p2.add_run("correctly_sized")
-        run_correct_font.font.size = Pt(11)
-        p2.add_run(" segment, then an ")
-        run_wrong_size = p2.add_run("ERROR_SIZE")
-        run_wrong_size.font.size = Pt(11)
-        p2.add_run(" run, and a ")
-        run_wrong_bold = p2.add_run("WRONGLY_BOLD")
-        run_wrong_bold.font.bold = True
-        p2.add_run(" run.")
-        
-        doc.add_paragraph("First line of text for para rule.\nSecond line of text.\nThird line.", style='Normal')
-        
-        doc.save(doc_file_path)
+        print(f"文档 '{doc_file_path}' 不存在")
+        exit(1)
+        # doc = Document()
+        # # 测试段落格式错误（对齐）
+        # p1 = doc.add_paragraph("This paragraph should be left aligned.", style='Normal')
+        # p1.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        #
+        # p2 = doc.add_paragraph("Text with a ", style='Normal')
+        # run_correct_font = p2.add_run("correctly_sized")
+        # run_correct_font.font.size = Pt(11)
+        # p2.add_run(" segment, then an ")
+        # run_wrong_size = p2.add_run("ERROR_SIZE")
+        # run_wrong_size.font.size = Pt(11)
+        # p2.add_run(" run, and a ")
+        # run_wrong_bold = p2.add_run("WRONGLY_BOLD")
+        # run_wrong_bold.font.bold = True
+        # p2.add_run(" run.")
+        # 
+        # doc.add_paragraph("First line of text for para rule.\nSecond line of text.\nThird line.", style='Normal')
+        # 
+        # doc.save(doc_file_path)
 
     checker = FormatChecker(DEFAULT_RULES)
     checker.check_document(doc_file_path)

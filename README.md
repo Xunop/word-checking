@@ -4,7 +4,13 @@
 
 ## How to use
 
-修改 `rules.py` 中的规则集格式，修改 `checking.py` 中的路径。
+修改 `rules.py` 中的规则集格式，复制一份文档到代码所在目录，修改 `checking.py` 中的路径：
+
+```py
+    doc_file_path = (
+        "test.docx"
+    )
+```
 
 ```bash
 pip install -r requirements.txt

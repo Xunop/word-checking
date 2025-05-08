@@ -171,7 +171,7 @@ DEFAULT_RULES = {
             "require_space_between_cn_number": True,
         },
         "Heading 1": {
-            "based_on": "论文正文",
+            "based_on": None,
             "chinese_font": "黑体",
             "western_font": "Times New Roman",
             "common_script_font": "黑体",
@@ -190,7 +190,7 @@ DEFAULT_RULES = {
             "require_space_between_cn_en": False,
         },
         "Heading 2": {
-            "based_on": "Heading 1",
+            "based_on": None,
             "chinese_font": "黑体",
             "western_font": "Times New Roman",
             "common_script_font": "黑体",
@@ -207,7 +207,7 @@ DEFAULT_RULES = {
             "require_space_between_cn_en": False,
         },
         "Heading 3": {
-            "based_on": "Heading 2",
+            "based_on": None,
             "chinese_font": "宋体",
             "western_font": "Times New Roman",
             "common_script_font": "宋体",
