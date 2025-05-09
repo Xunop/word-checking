@@ -218,7 +218,8 @@ class FormatChecker:
             # actual_indent_emu = (
             #     actual_indent_raw.pt if actual_indent_raw is not None and actual_indent_raw != 0 else 0
             # )  # 确保是数值
-            actual_indent = get_effective_first_line_indent(p)
+            actual_indent_raw = get_effective_first_line_indent(p)
+            actual_indent = actual_indent_raw if actual_indent_raw is not None else 0
 
             if abs(actual_indent - expected_indent) > PT_TOLERANCE:
                 self._add_error(
@@ -306,7 +307,8 @@ class FormatChecker:
             #         actual_val = (
             #             float(actual_val_raw) if actual_val_raw is not None else 1.0
             #         )  # 默认给个值避免比较错误
-            actual_val = get_effective_line_spacing(p)
+            actual_val_raw = get_effective_line_spacing(p)
+            actual_val = actual_val_raw if actual_val_raw is not None else 1.0
 
             if abs(actual_val - expected_val) > PT_TOLERANCE:
                 self._add_error(
